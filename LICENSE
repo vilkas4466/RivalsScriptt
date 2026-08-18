@@ -1,24 +1,225 @@
-This is free and unencumbered software released into the public domain.
+-- Official Zorez Hub: True Mobile Auto-Loading + Stretched Res + Max FPS
 
-Anyone is free to copy, modify, publish, use, compile, sell, or
-distribute this software, either in source code form or as a compiled
-binary, for any purpose, commercial or non-commercial, and by any
-means.
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local localPlayer = Players.LocalPlayer
+local TargetFolder = localPlayer:WaitForChild("PlayerGui")
 
-In jurisdictions that recognize copyright laws, the author or authors
-of this software dedicate any and all copyright interest in the
-software to the public domain. We make this dedication for the benefit
-of the public at large and to the detriment of our heirs and
-successors. We intend this dedication to be an overt act of
-relinquishment in perpetuity of all present and future rights to this
-software under copyright law.
+-- 1. UNIVERSAL AUTO-LOAD BYPASS (Works perfectly on Delta!)
+-- This keeps the script saved in your phone's memory across 1v1 & 2v2 servers
+local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+if queue_on_teleport then
+    localPlayer.OnTeleport:Connect(function(State)
+        if State == Enum.TeleportState.Started or State == Enum.TeleportState.InProgress then
+            -- This tells Delta to re-run this exact code as soon as you enter the next match
+            queue_on_teleport([[
+                repeat task.wait() until game:IsLoaded()
+                loadstring(game:HttpGet("https://githubusercontent.com"))()
+            ]])
+        end
+    end)
+end
 
-For more information, please refer to <https://unlicense.org>
+-- Clear out any old versions of the loader UI
+if TargetFolder:FindFirstChild("ZorezLoader") then
+    TargetFolder.ZorezLoader:Destroy()
+end
+
+-- 2. BASE SCREEN CONTAINER SETUP
+local LoadingScreen = Instance.new("ScreenGui")
+LoadingScreen.Name = "ZorezLoader"
+LoadingScreen.ResetOnSpawn = false
+LoadingScreen.DisplayOrder = 99999
+LoadingScreen.Parent = TargetFolder
+
+local Background = Instance.new("Frame")
+Background.Size = UDim2.new(1, 0, 1, 0)
+Background.Position = UDim2.new(0, 0, 0, 0)
+Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Background.BorderSizePixel = 0
+Background.Parent = LoadingScreen
+
+local MainTextLabel = Instance.new("TextLabel")
+MainTextLabel.Size = UDim2.new(0, 600, 0, 100)
+MainTextLabel.Position = UDim2.new(0.5, -300, 0.5, -50)
+MainTextLabel.BackgroundTransparency = 1
+MainTextLabel.Text = "Zorez Hub"
+MainTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainTextLabel.TextSize = 44
+MainTextLabel.Font = Enum.Font.GothamBold
+MainTextLabel.Parent = Background
+
+-- 3. SMART MATRIX "STRETCH BACK" + AIM DOWN SIGHT LOCK
+local NormalStretch = 1.4  
+local AimingStretch = 0.5  
+local Camera = workspace.CurrentCamera 
+
+if getgenv().MatrixCameraScript then 
+    getgenv().MatrixCameraScript:Disconnect()
+end
+
+getgenv().MatrixCameraScript = game:GetService("RunService").RenderStepped:Connect(function() 
+    local currentMultiplier = NormalStretch
+    if Camera.FieldOfView < 65 then
+        currentMultiplier = AimingStretch
+    end
+    Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, currentMultiplier) 
+end)
+
+-- 4. GLOBAL ENGINE OVERRIDE ENVIRONMENT TUNING (Lag-Free)
+local function fastStyleOverride()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    game:GetService("MaterialService").Use2022Materials = false
+
+    local Lighting = game:GetService("Lighting")
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 125) 
+    Lighting.Ambient = Color3.fromRGB(100, 100, 105)
+
+    for _, child in pairs(Lighting:GetChildren()) do
+        if child:IsA("Sky") or child:IsA("Atmosphere") or child:IsA("Clouds") then
+            child:Destroy()
+        end
+    end
+
+    local ExactSky = Instance.new("Sky")
+    ExactSky.Name = "FullGraySky"
+    ExactSky.SkyboxBk = "rbxassetid://10145895045"
+    ExactSky.SkyboxDn = "rbxassetid://10145895045"
+    ExactSky.SkyboxFt = "rbxassetid://10145895045"
+    ExactSky.SkyboxLf = "rbxassetid://10145895045"
+    ExactSky.SkyboxRt = "rbxassetid://10145895045"
+    ExactSky.SkyboxUp = "rbxassetid://10145895045"
+    ExactSky.SunTextureId = "" 
+    ExactSky.MoonTextureId = ""
+    ExactSky.Parent = Lighting
+end
+
+fastStyleOverride()
+
+-- 5. SCROLLABLE CREDIT DASHBOARD & LINK COPIER PANEL
+local function showInfoMenu()
+    local MenuFrame = Instance.new("Frame")
+    MenuFrame.Size = UDim2.new(0, 480, 0, 360)
+    MenuFrame.Position = UDim2.new(0.5, -240, 0.5, -180)
+    MenuFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    MenuFrame.BorderSizePixel = 2
+    MenuFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    MenuFrame.Active = true
+    MenuFrame.Parent = Background
+    
+    local DiscordButton = Instance.new("TextButton")
+    DiscordButton.Size = UDim2.new(1, -40, 0, 40)
+    DiscordButton.Position = UDim2.new(0, 20, 0, 15)
+    DiscordButton.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+    DiscordButton.BorderSizePixel = 1
+    DiscordButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    DiscordButton.Text = "DISCORD SERVER LINK"
+    DiscordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DiscordButton.TextSize = 15
+    DiscordButton.Font = Enum.Font.GothamBold
+    DiscordButton.Parent = MenuFrame
+    
+    DiscordButton.MouseButton1Click:Connect(function()
+        local discordLinkString = "https://discord.gg" 
+        if setclipboard then setclipboard(discordLinkString)
+        elseif toclipboard then toclipboard(discordLinkString) end
+        
+        DiscordButton.Text = "LINK COPIED!"
+        DiscordButton.BackgroundColor3 = Color3.fromRGB(35, 110, 35)
+        task.delay(2, function()
+            DiscordButton.Text = "DISCORD SERVER LINK"
+            DiscordButton.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+        end)
+    end)
+    
+    local ScrollingFrame = Instance.new("ScrollingFrame")
+    ScrollingFrame.Size = UDim2.new(1, -20, 1, -140)
+    ScrollingFrame.Position = UDim2.new(0, 10, 0, 70)
+    ScrollingFrame.BackgroundTransparency = 1
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 480)
+    ScrollingFrame.ScrollBarThickness = 6
+    ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+    ScrollingFrame.Parent = MenuFrame
+    
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Padding = UDim.new(0, 10)
+    UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    UIListLayout.Parent = ScrollingFrame
+    
+    local function createLabelText(message, size, isBold, textColor)
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -20, 0, 35)
+        Label.BackgroundTransparency = 1
+        Label.Text = message
+        Label.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
+        Label.TextSize = size
+        Label.Font = isBold and Enum.Font.GothamBold or Enum.Font.GothamMedium
+        Label.TextWrapped = true
+        Label.Parent = ScrollingFrame
+    end
+    
+    createLabelText("This Script Was Made By Zorez_LQ", 22, true)
+    createLabelText("This Script Is For FPS BOOST And EASY PLAYING", 16, true, Color3.fromRGB(200, 255, 200))
+    createLabelText("Use This Script When u Are In Lobby Or In A Match", 15, false)
+    createLabelText("This Script Isn't Universal It Is For RIVALS", 15, true)
+    createLabelText("If U Want More Scripts U Can Check In My Discord", 15, false)
+    
+    local UnderstandButton = Instance.new("TextButton")
+    UnderstandButton.Size = UDim2.new(0, 220, 0, 45)
+    UnderstandButton.Position = UDim2.new(0.5, -110, 1, -55)
+    UnderstandButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    UnderstandButton.Text = "I Understand"
+    UnderstandButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    UnderstandButton.TextSize = 18
+    UnderstandButton.Font = Enum.Font.GothamBold
+    UnderstandButton.BorderSizePixel = 0
+    UnderstandButton.Parent = MenuFrame
+    
+    UnderstandButton.MouseButton1Click:Connect(function()
+        local fadeBg = TweenService:Create(Background, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+        local fadeMenu = TweenService:Create(MenuFrame, TweenInfo.new(0.4), {BackgroundTransparency = 1})
+        
+        for _, item in pairs(MenuFrame:GetDescendants()) do
+            if item:IsA("TextLabel") or item:IsA("TextButton") then
+                TweenService:Create(item, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+            elseif item:IsA("ScrollingFrame") or item:IsA("Frame") then
+                TweenService:Create(item, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+            end
+        end
+        
+        fadeBg:Play()
+        fadeBg.Completed:Connect(function()
+            LoadingScreen:Destroy()
+        end)
+    end)
+end
+
+-- 6. RUNNING INTRO TIMED LOGIC FLOWS
+task.spawn(function()
+    task.wait(2.5)
+    local fadeOut = TweenService:Create(MainTextLabel, TweenInfo.new(0.3), {TextTransparency = 1})
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
+    
+    MainTextLabel.Text = "LOADING..."
+    local fadeIn = TweenService:Create(MainTextLabel, TweenInfo.new(0.3), {TextTransparency = 0})
+    fadeIn:Play()
+    
+    task.wait(2.5)
+    TweenService:Create(MainTextLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    task.wait(0.3)
+    
+    showInfoMenu()
+end)
+
+-- 7. ULTRA SMOOTH RESPAWN AUTO-CLEAN (Keeps performance flawless across rounds)
+if getgenv().CharacterResetHook then
+    getgenv().CharacterResetHook:Disconnect()
+end
+
+getgenv().CharacterResetHook = localPlayer.CharacterAdded:Connect(function()
+    task.wait(1.2)
+    fastStyleOverride()
+end)
